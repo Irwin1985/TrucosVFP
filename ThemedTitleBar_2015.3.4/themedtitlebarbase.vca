@@ -1,0 +1,1236 @@
+SCCTEXT Version 4.0.0.2
+PLATFORM C(8,0),UNIQUEID C(10,0),TIMESTAMP N(10,0),CLASS M(4,0),CLASSLOC M(4,0),BASECLASS M(4,0),OBJNAME M(4,0),PARENT M(4,0),PROPERTIES M(4,0),PROTECTED M(4,0),METHODS M(4,0),OBJCODE M(4,0),OLE M(4,0),OLE2 M(4,0),RESERVED1 M(4,0),RESERVED2 M(4,0),RESERVED3 M(4,0),RESERVED4 M(4,0),RESERVED5 M(4,0),RESERVED6 M(4,0),RESERVED7 M(4,0),RESERVED8 M(4,0),USER M(4,0)
+1252
+
+[ RECORD]
+[PLATFORM] COMMENT 
+[UNIQUEID] Class     
+[START RESERVED1]
+VERSION =   3.00[END RESERVED1]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _48F07AUEM
+[CLASS] control
+[BASECLASS] control
+[OBJNAME] themedtitlebarbase
+[START PROPERTIES]
+BackColor = 0,0,0
+BorderWidth = 0
+ForeColor = 255,255,255
+Height = 60
+Name = "themedtitlebarbase"
+Width = 325
+cdescriptionproperty = ThemedTitleBarDescription
+cimageproperty = ThemedTitleBarImage
+csettingsclass = ThemedTitleBarSettingsBase
+csettingsclasslib = ThemedTitleBarBase.vcx
+ctitleproperty = 
+lautomoveformcontrols = .T.
+lfixedheight = .F.
+lrespectautocenter = .T.
+[END PROPERTIES]
+[START METHODS]
+PROCEDURE DblClick
+*--------------------------------------------
+* Maximize or restore form.
+*--------------------------------------------
+IF m.Thisform.MaxButton
+	IF m.Thisform.WindowState == 2		&& Maximized.
+		Thisform.WindowState = 0		&& Normal.
+	ELSE
+		Thisform.WindowState = 2		&& Maximized.
+	ENDIF
+ENDIF
+
+ENDPROC
+PROCEDURE Destroy
+UNBINDEVENTS( This )
+
+ENDPROC
+PROCEDURE Init
+*--------------------------------------------
+* Prevent this class form beeing instantiated
+* directly.
+*--------------------------------------------
+IF m.This._IsAbstract( m.This.Class, "ThemedTitleBarBase")
+	RETURN .F.
+ENDIF
+*--------------------------------------------
+* Setup.
+*--------------------------------------------
+LOCAL lcFormComment, lnFormMinHeight, lnFormMaxHeight, loSettings
+*
+WITH Thisform
+	*--------------------------------------------
+	* Some form properties must have certain
+	* values, thus removing the default TitleBar
+	* has no adverse side effects.
+	*--------------------------------------------
+	lcFormComment = .Comment
+	lnFormMinHeight = .MinHeight
+	lnFormMaxHeight = .MaxHeight
+	.Comment = "*NORESIZE*"			&& Switch off mwResize.
+	.MinHeight = -1
+	.MaxHeight = -1
+	*--------------------------------------------
+	* Remove form title bar.
+	*--------------------------------------------
+	.TitleBar = 0	&& Off.
+	*--------------------------------------------
+	* Restore the form properties we changed.
+	*--------------------------------------------
+	.MinHeight = m.lnFormMinHeight
+	.MaxHeight = m.lnFormMaxHeight
+	.Comment = m.lcFormComment
+	*--------------------------------------------
+	* Without a title bar a vfp form with
+	* BorderStyle=0 has no border at all. There
+	* is no way to differ it from a container on
+	* the underlying form. This might overwhelm
+	* the user.
+	*--------------------------------------------
+	IF .BorderStyle == 0
+		.BorderStyle = 1
+	ENDIF
+ENDWITH
+*--------------------------------------------
+* A global settings object speeds things up.
+* Did the user create one?
+*--------------------------------------------
+DO CASE
+	CASE VARTYPE( _Screen.ThemedTitleBarSettings ) == "O"
+		loSettings = _Screen.ThemedTitleBarSettings
+	CASE SET( "DATASESSION" ) == 1
+		*--------------------------------------------
+		* Running in the global DataSession. So no
+		* problem creating a new object on _Screen.
+		*--------------------------------------------
+		_Screen.NewObject( "ThemedTitleBarSettings", m.This.cSettingsClass, m.This.cSettingsClassLib )
+		loSettings = _Screen.ThemedTitleBarSettings
+	OTHERWISE
+		*--------------------------------------------
+		* Private DataSession. Creating a new object
+		* on _Screen would leave this DataSession
+		* open when the form is closed. The form's
+		* cursors would stay open, too. So we have to
+		* use a temporary copy of the settings
+		* object.
+		*--------------------------------------------
+		loSettings = NEWOBJECT( m.This.cSettingsClass, m.This.cSettingsClassLib )
+ENDCASE
+*--------------------------------------------
+* Set colors and fonts.
+*--------------------------------------------
+WITH loSettings
+	This.BackColor = .nTitleBarBackColor
+	This.lblCaption.ForeColor = .nTitleBarForeColor
+	This.edtDescription.ForeColor = .nTitleBarForeColor
+	This.lblCaption.FontName = .cCaptionFontFamily
+	This.edtDescription.FontName = .cDescriptionFontFamily
+ENDWITH
+loSettings = .NULL.
+RELEASE loSettings
+*--------------------------------------------
+* Position and anchor our own title bar.
+*--------------------------------------------
+This.Anchor = 0
+This.Left = 0
+This.Top = 0
+This.Width = m.Thisform.Width
+This.Anchor = 10
+*--------------------------------------------
+* Position and anchor system buttons.
+*--------------------------------------------
+m.This.cmdClose.Move( m.This.Width - m.This.cmdClose.Width - 1, 1 )
+m.This.cmdMaximize.Move( m.This.Width - m.This.cmdClose.Width - m.This.cmdMaximize.Width - 2, 1 )
+m.This.cmdMinimize.Move( m.This.Width - m.This.cmdClose.Width - m.This.cmdMaximize.Width - m.This.cmdMaximize.Width - 3, 1 )
+STORE 9 TO This.cmdClose.Anchor, This.cmdMaximize.Anchor, This.cmdMinimize.Anchor
+*--------------------------------------------
+* Set anchoring of caption label. Positioning
+* happens in RefreshImage().
+*--------------------------------------------
+This.lblCaption.Anchor = 10
+*--------------------------------------------
+* Adjust description width to title bar
+* width.
+*--------------------------------------------
+This.edtDescription.Width = m.This.Width - m.This.edtDescription.Left - 5
+This.edtDescription.Anchor = 11
+*--------------------------------------------
+* Bind all form properties influencing the
+* system buttons' state to the Refresh event
+* of our title bar.
+*--------------------------------------------
+LOCAL lnResult
+lnResult = BINDEVENT( Thisform, "MinButton", This, "Refresh", 1 )
+ASSERT m.lnResult > 0 MESSAGE m.This.Name + ": BindEvent to MinButton did not work"
+lnResult = BINDEVENT( Thisform, "MaxButton", This, "Refresh", 1 )
+ASSERT m.lnResult > 0 MESSAGE m.This.Name + ": BindEvent to MaxButton did not work"
+lnResult = BINDEVENT( Thisform, "WindowState", This, "Refresh", 1 )
+ASSERT m.lnResult > 0 MESSAGE m.This.Name + ": BindEvent to WindowState did not work"
+lnResult = BINDEVENT( Thisform, "Closable", This, "Refresh", 1 )
+ASSERT m.lnResult > 0 MESSAGE m.This.Name + ": BindEvent to Closable did not work"
+*--------------------------------------------
+*(..)An additional BINDEVENT() to the form's
+*(..)Resize() event is necessary because
+*(..)BINDEVENT() to WindowState doesn't fire
+*(..)in two situations:
+*(..)- A minimized form is maximized or
+*(..)  restored.
+*(..)- A maximized form's size is reduced
+*(..)  using the mouse.
+*--------------------------------------------
+lnResult = BINDEVENT( Thisform, "Resize", This, "Refresh", 1 )
+ASSERT m.lnResult > 0 MESSAGE m.This.Name + ": BindEvent to Resize did not work"
+*--------------------------------------------
+* Forward changes to form caption or title to
+* the caption label.
+*--------------------------------------------
+lnResult = BINDEVENT( Thisform, "Caption", This, "RefreshCaption", 1 )
+ASSERT m.lnResult > 0 MESSAGE m.This.Name + ": BindEvent to Caption did not work"
+IF NOT EMPTY( m.This.cTitleProperty ) ;
+		AND TYPE( "m.Thisform." + m.This.cTitleProperty ) == "C"
+	lnResult = BINDEVENT( Thisform, m.This.cTitleProperty, This, "RefreshCaption", 1 )
+	ASSERT m.lnResult > 0 MESSAGE m.This.Name + ": BindEvent to title property did not work"
+ENDIF
+*--------------------------------------------
+* Forward title bar image name changes to the
+* image control.
+*--------------------------------------------
+IF TYPE( "m.Thisform." + m.This.cImageProperty ) == "C"
+	lnResult = BINDEVENT( Thisform, m.This.cImageProperty, This, "RefreshImage", 1 )
+	ASSERT m.lnResult > 0 MESSAGE m.This.Name + ": BindEvent to image property did not work"
+	*--------------------------------------------
+	* As only the Refresh() event is
+	* automatically triggered at form start, we
+	* have to trigger the RefreshImage() event
+	* ourselves.
+	* As RefreshImage() positions edtDescription
+	* we have to do this unconditionally.
+	*--------------------------------------------
+	m.This.RefreshImage()
+ENDIF
+*--------------------------------------------
+* As only the Refresh() event is
+* automatically triggered at form start, we
+* have to trigger the RefreshCaption() event
+* ourselves.
+* As lblCaption.Caption initially is not
+* empty, we have to do this unconditionally.
+*--------------------------------------------
+m.This.RefreshCaption()
+*--------------------------------------------
+* Forward title bar description changes to
+* the editbox.
+*--------------------------------------------
+IF TYPE( "m.Thisform." + m.This.cDescriptionProperty ) == "C"
+	lnResult = BINDEVENT( Thisform, m.This.cDescriptionProperty, This, "RefreshDescription", 1 )
+	ASSERT m.lnResult > 0 MESSAGE m.This.Name + ": BindEvent to description property did not work"
+	*--------------------------------------------
+	* As only the Refresh() event is
+	* automatically triggered at form start, we
+	* have to trigger the RefreshDescription()
+	* event ourselves.
+	*--------------------------------------------
+	IF NOT EMPTY(EVALUATE( "m.Thisform." + m.This.cDescriptionProperty ))
+		m.This.RefreshDescription()
+	ENDIF
+ENDIF
+*--------------------------------------------
+* Always call This.AutoMoveFormControls() at
+* first Form.Show(). It decides if the other
+* controls on the form have to by moved
+* downward by TitleBar height.
+*--------------------------------------------
+lnResult = BINDEVENT( Thisform, "Show", This, "AutoMoveFormControls" )
+ASSERT m.lnResult > 0 MESSAGE m.This.Name + ": BindEvent to Show did not work"
+
+ENDPROC
+PROCEDURE MouseDown
+LPARAMETERS tnButton, tnShift, tnXCoord, tnYCoord
+*--------------------------------------------
+* Left mouse button click?
+*--------------------------------------------
+IF NOT m.tnButton == 1
+	RETURN
+ENDIF
+*--------------------------------------------
+* Move form as long as left mouse button is
+* clicked.
+*--------------------------------------------
+* Constants.
+*--------------------------------------------
+#DEFINE WM_SYSCOMMAND 0x112
+#DEFINE WM_LBUTTONUP 0x202
+#DEFINE MOUSE_MOVE 0xf012
+*--------------------------------------------
+* Windows API functions to move the form
+* dragging our own title bar.
+*--------------------------------------------
+DECLARE LONG ReleaseCapture IN Win32API AS ThemedTitleBar_ReleaseCapture
+DECLARE LONG SendMessage IN Win32API AS ThemedTitleBar_SendMessage ;
+	LONG hWnd, LONG wMsg, LONG wParam, LONG lParam
+*--------------------------------------------
+* No idea what this API call really does...
+*--------------------------------------------
+ThemedTitleBar_ReleaseCapture()
+*--------------------------------------------
+* Complete left click by sending 'left button
+* up' message.
+*--------------------------------------------
+ThemedTitleBar_SendMessage( m.Thisform.HWnd, WM_LBUTTONUP, 0x0, 0x0 )
+*--------------------------------------------
+* Initiate window move.
+*--------------------------------------------
+ThemedTitleBar_SendMessage( m.Thisform.HWnd, WM_SYSCOMMAND, MOUSE_MOVE, 0x0 )
+
+ENDPROC
+PROCEDURE Move
+LPARAMETERS tnLeft, tnTop, tnWidth, tnHeight
+*--------------------------------------------
+* Prevent resizers like mwResize from
+* changing This.Height by calling Move()?
+*--------------------------------------------
+IF m.This.lFixedHeight
+	NODEFAULT
+ENDIF
+
+ENDPROC
+PROCEDURE Refresh
+*--------------------------------------------
+* When this method is called by BINDEVENT()
+* the contained controls' Refresh() event
+* isn't triggered. So we have to call it
+* manually.
+*--------------------------------------------
+NODEFAULT
+m.This.cmdMinimize.Refresh()
+m.This.cmdMaximize.Refresh()
+m.This.cmdClose.Refresh()
+*--------------------------------------------
+*(..)After reducing a maximized form's size
+*(..)by moving the form's lower left or right
+*(..)corner with the mouse sometimes this
+*(..)control's anchoring doesn't fire.
+*--------------------------------------------
+IF NOT m.This.Width == m.Thisform.Width
+	This.Width = m.Thisform.Width
+ENDIF
+*--------------------------------------------
+* After the form was resized we have to check
+* again how many characters of the caption
+* can be displayed.
+*--------------------------------------------
+m.This.RefreshCaption()
+
+ENDPROC
+PROCEDURE _isabstract
+LPARAMETERS tcClass, tcClassName
+
+IF UPPER( m.tcClass ) == UPPER( m.tcClassName )
+	#DEFINE MB_OK		0
+	#DEFINE MB_ICONSTOP	16
+	MESSAGEBOX( "This class can not be instantiated directly." +CHR(13)+ ;
+		"Please use a derivative of the class instead.", ;
+ 		MB_ICONSTOP + MB_OK, ;
+ 		m.tcClassName )
+	RETURN .T.
+ELSE
+	RETURN .F.
+ENDIF
+
+ENDPROC
+PROCEDURE automoveformcontrols
+LPARAMETERS tnShow
+*--------------------------------------------
+* Make sure this method is called only once.
+*--------------------------------------------
+UNBINDEVENTS( Thisform, "Show", This, "AutoMoveFormControls" )
+*
+IF m.This.lAutoMoveFormControls
+	*--------------------------------------------
+	* Check if Form.Show() was called from
+	* Form.Init().
+	*--------------------------------------------
+	IF NOT m.Thisform.Visible
+		LOCAL laStackInfo[1], lnStackSize
+		lnStackSize = ASTACKINFO( laStackInfo )
+		IF m.lnStackSize > 1 ;
+				AND ".show" $ LOWER( laStackInfo[ m.lnStackSize - 1, 6 ] ) ;
+				AND LOWER(GETWORDNUM( laStackInfo[ m.lnStackSize, 3 ], 1, "." )) == LOWER(GETWORDNUM( laStackInfo[ m.lnStackSize - 1, 3 ], 1, "." ))
+			*--------------------------------------------
+			* By calling Form.Show() from Form.Init() the
+			* programmer changed the internal order of
+			* VFP's form events. If she also changed
+			* Form.Height within Form.Init(), anchoring
+			* didn't fire yet. I.e., the controls' Height
+			* and/or Top don't reflect the changed
+			* Form.Height.
+			* So let's make sure anchoring has fired at
+			* least once before MoveFormControls() is
+			* called. Making the form visible triggers
+			* VFP's anchoring.
+			*--------------------------------------------
+			Thisform.Visible = .T.
+			Thisform.Visible = .F.
+		ENDIF
+	ENDIF
+	*
+	m.This.MoveFormControls()
+ENDIF
+
+ENDPROC
+PROCEDURE moveformcontrols
+LPARAMETERS tnTop
+*--------------------------------------------
+* Check parameters.
+*--------------------------------------------
+IF PCOUNT() == 0
+	tnTop = -4
+ENDIF
+*--------------------------------------------
+* Setup.
+*--------------------------------------------
+LOCAL lnPixel, i, loControl, laControls[1], lnControls, ;
+	lnAnchor, lnFormHeight, lcFormComment
+lnFormHeight = m.Thisform.Height
+*--------------------------------------------
+* Move all form controls below a certain Top
+* downward by n pixels.
+*--------------------------------------------
+lnPixel = m.This.Height	
+lnControls = 0
+FOR i = 1 TO m.Thisform.ControlCount
+	loControl = .NULL.
+	loControl = m.Thisform.Controls[ i ]
+	*--------------------------------------------
+	* Ignore controls without a Top property
+	* (e.g. Collections).
+	*--------------------------------------------
+	IF NOT PEMSTATUS( m.loControl, "Top", 5 )
+		LOOP
+	ENDIF
+	*--------------------------------------------
+	* Do we have to move this control?
+	*--------------------------------------------
+	IF m.loControl.Top < m.tnTop
+		LOOP
+	ENDIF
+	*--------------------------------------------
+	* Remember what we want to do.
+	* laControls[] has four columns:
+	*  1 - control's object reference.
+	*  2 - control's Top value.
+	*  3 - control's Anchor value.
+	*  4 - control's _nOriginalTop value
+	*      (this is a mwResize property) or
+	*      .NULL. if this property doesn't exist.
+	*--------------------------------------------
+	lnControls = m.lnControls + 1
+	DIMENSION laControls[ m.lnControls, 4 ]
+	laControls[ m.lnControls, 1 ] = m.loControl
+	laControls[ m.lnControls, 2 ] = m.loControl.Top + m.lnPixel
+	*
+	IF PEMSTATUS( m.loControl, "Anchor", 5 )	&& Timers don't have an Anchor property.
+		laControls[ m.lnControls, 3 ] = m.loControl.Anchor
+		IF m.loControl.Anchor > 0
+			*--------------------------------------------
+			* Cancel anchoring to make moving possible.
+			*--------------------------------------------
+			loControl.Anchor = 0
+		ENDIF
+	ELSE
+		laControls[ m.lnControls, 3 ] = 0
+	ENDIF
+	*
+	IF PEMSTATUS( m.loControl, "_nOriginalTop", 5 )		&& Present only after first run of mwResize.Resize().
+		laControls[ m.lnControls, 4 ] = m.loControl._nOriginalTop + m.lnPixel
+	ELSE
+		laControls[ m.lnControls, 4 ] = m.loControl.Top + m.lnPixel
+	ENDIF
+ENDFOR
+*--------------------------------------------
+* Check if mwResize is present.
+*--------------------------------------------
+IF NOT PEMSTATUS( m.Thisform, "_nOriginalHeight", 5 )
+	*--------------------------------------------
+	* In case mwResize is present but didn't run
+	* up to now, trigger it once to create the
+	* above property.
+	*--------------------------------------------
+	lcFormComment = m.Thisform.Comment
+	Thisform.Comment = "*NORESIZE*"		&& Switch off mwResize temporary.
+	m.Thisform.Resize()					&& Force mwResize to save form size.
+	Thisform.Comment = m.lcFormComment
+ENDIF
+*--------------------------------------------
+* If this form uses mwResize we have to
+* inform it about the new height.
+*--------------------------------------------
+IF PEMSTATUS( m.Thisform, "_nOriginalHeight", 5 )
+	Thisform._nOriginalHeight = m.Thisform._nOriginalHeight + m.lnPixel
+ENDIF
+*--------------------------------------------
+* MaxHeight must allow the new height.
+*--------------------------------------------
+IF NOT m.Thisform.MaxHeight == -1 ;
+		AND m.Thisform.MaxHeight < m.lnFormHeight
+	Thisform.MaxHeight = m.lnFormHeight
+ENDIF
+*--------------------------------------------
+* Increase form height by title bar height.
+* This may trigger a run of mwResize.Resize()
+* if this form uses mwResize.
+*--------------------------------------------
+Thisform.Height = m.lnFormHeight + m.lnPixel
+*--------------------------------------------
+* Increase MinHeight by title bar height.
+* This may trigger a run of mwResize.Resize()
+* if this form uses mwResize.
+*--------------------------------------------
+IF NOT m.Thisform.MinHeight == -1
+	Thisform.MinHeight = m.Thisform.MinHeight + m.lnPixel
+ENDIF
+*--------------------------------------------
+* Move controls. Restore anchoring and
+* mwResize _nOriginalTop.
+*--------------------------------------------
+FOR i = 1 TO m.lnControls
+	laControls[ i, 1 ].Top = laControls[ i, 2 ]
+	IF laControls[ i, 3 ] > 0
+		laControls[ i, 1 ].Anchor = laControls[ i, 3 ]
+	ENDIF
+	IF PEMSTATUS( laControls[ i, 1 ], "_nOriginalTop", 5 )		&& Present only after first run of mwResize.Resize().
+		laControls[ i, 1 ]._nOriginalTop = laControls[ i, 4 ]
+	ENDIF
+	laControls[ i, 1 ] = .NULL.
+ENDFOR
+*--------------------------------------------
+* While moving controls we moved this
+* control, too. So we have to move it back to
+* the upper edge of the form.
+*--------------------------------------------
+IF m.This.Anchor == 0
+	This.Top = 0
+ELSE
+	lnAnchor = m.This.Anchor
+	This.Anchor = 0
+	This.Top = 0
+	This.Anchor = m.lnAnchor
+ENDIF
+IF PEMSTATUS( m.This, "_nOriginalTop", 5 )
+	This._nOriginalTop = 0
+ENDIF
+*--------------------------------------------
+* As we changed the form's height we have to
+* center it again if it was centered before.
+*--------------------------------------------
+IF m.This.lRespectAutoCenter ;
+		AND m.Thisform.AutoCenter
+	Thisform.AutoCenter = .T.
+ENDIF
+*--------------------------------------------
+* Cleanup.
+*--------------------------------------------
+loControl = .NULL.
+RELEASE loControl, laControls
+
+ENDPROC
+PROCEDURE refreshcaption
+*--------------------------------------------
+* Setup.
+*--------------------------------------------
+LOCAL lcCaption
+*--------------------------------------------
+* Inherit title property or form caption.
+*--------------------------------------------
+IF NOT EMPTY( m.This.cTitleProperty ) ;
+		AND TYPE( "m.Thisform." + m.This.cTitleProperty ) == "C"
+	lcCaption = EVALUATE( "m.Thisform." + m.This.cTitleProperty )
+ELSE
+	lcCaption = ""
+ENDIF	
+IF EMPTY( m.lcCaption )
+	lcCaption = m.Thisform.Caption
+ENDIF
+*--------------------------------------------
+* Truncate caption if it's too long.
+*--------------------------------------------
+lcCaption = m.This.TruncateString( m.lcCaption, ;
+	m.This.lblCaption.Width, ;
+	m.This.lblCaption.FontName, ;
+	m.This.lblCaption.FontSize, ;
+	m.This.lblCaption.FontBold )
+*--------------------------------------------
+* Set caption.
+*--------------------------------------------
+This.lblCaption.Caption = m.lcCaption
+
+ENDPROC
+PROCEDURE refreshdescription
+*--------------------------------------------
+* Setup.
+*--------------------------------------------
+LOCAL lcDescription, lnCaptionAnchor, lnDescriptionAnchor
+lcDescription = EVALUATE( "m.Thisform." + m.This.cDescriptionProperty )
+*
+WITH This
+	*--------------------------------------------
+	* We have to cancel anchoring while moving
+	* controls.
+	*--------------------------------------------
+	lnCaptionAnchor = .lblCaption.Anchor
+	lnDescriptionAnchor = .edtDescription.Anchor
+	.lblCaption.Anchor = 0
+	.edtDescription.Anchor = 0
+	*--------------------------------------------
+	* Show description if it's set at the form
+	* level.
+	*--------------------------------------------
+	IF EMPTY( m.lcDescription )
+		.lblCaption.Top = (.Height - .lblCaption.Height) / 2
+		.edtDescription.Value = ""
+	ELSE
+		.edtDescription.Value = m.lcDescription
+		*--------------------------------------------
+		* With a two line description we have to move
+		* the editbox a bit upward to make the second
+		* line completely visible.
+		*--------------------------------------------
+		IF CHR(13) $ m.lcDescription
+			.lblCaption.Top = 3
+			.edtDescription.Top = 28
+		ELSE
+			.lblCaption.Top = 4
+			.edtDescription.Top = 31
+		ENDIF
+	ENDIF
+	*--------------------------------------------
+	* Restore anchoring.
+	*--------------------------------------------
+	.lblCaption.Anchor = m.lnCaptionAnchor
+	.edtDescription.Anchor = m.lnDescriptionAnchor
+ENDWITH
+
+ENDPROC
+PROCEDURE refreshimage
+*--------------------------------------------
+* Setup.
+*--------------------------------------------
+LOCAL lcImage, lnCaptionAnchor, lnDescriptionAnchor
+lcImage = EVALUATE( "m.Thisform." + m.This.cImageProperty )
+*
+WITH This
+	*--------------------------------------------
+	* We have to cancel anchoring while moving
+	* controls.
+	*--------------------------------------------
+	lnCaptionAnchor = .lblCaption.Anchor
+	lnDescriptionAnchor = .edtDescription.Anchor
+	.lblCaption.Anchor = 0
+	.edtDescription.Anchor = 0
+	*--------------------------------------------
+	* Show title bar image if it's set at the
+	* form level.
+	* If there's no title bar image to show, we
+	* move caption and description to the left.
+	*--------------------------------------------
+	IF EMPTY( m.lcImage )
+		.imgTitle.Visible = .F.
+		.imgTitle.Picture = ""
+		.lblCaption.Left = .imgTitle.Left
+		.lblCaption.Width = .cmdMinimize.Left - .lblCaption.Left + 5
+		.edtDescription.Left = .imgTitle.Left + 18
+	ELSE
+		.imgTitle.Picture = m.lcImage
+		.imgTitle.Visible = .T.
+		.lblCaption.Left = .imgTitle.Left * 2 + .imgTitle.Width
+		.lblCaption.Width = .cmdMinimize.Left - .lblCaption.Left + 5
+		.edtDescription.Left = .imgTitle.Left * 2 + .imgTitle.Width + 18
+	ENDIF
+	*--------------------------------------------
+	* Restore anchoring.
+	*--------------------------------------------
+	.lblCaption.Anchor = m.lnCaptionAnchor
+	.edtDescription.Anchor = m.lnDescriptionAnchor
+ENDWITH
+
+ENDPROC
+PROCEDURE truncatestring
+LPARAMETERS tcString, tnMaxLength, tcFontName, tnFontSize, tlFontBold
+*--------------------------------------------
+* Setup.
+*--------------------------------------------
+LOCAL lcTruncatedString, llEllipsisAdded, lnLen, lcFontBold, lnAvarageCharacterWidth
+lcTruncatedString = m.tcString
+lcFontBold = IIF( m.tlFontBold, "B", "" )
+lnAvarageCharacterWidth = FONTMETRIC( 6, m.tcFontName, m.tnFontSize, m.lcFontBold )
+*--------------------------------------------
+* Shorten the given string until it's no
+* longer than the maximum lenght.
+*--------------------------------------------
+lnLen = LEN( m.lcTruncatedString )
+llEllipsisAdded = .F.
+DO WHILE TXTWIDTH( m.lcTruncatedString, m.tcFontName, m.tnFontSize, m.lcFontBold ) * m.lnAvarageCharacterWidth > m.tnMaxLength
+	*--------------------------------------------
+	* Cut the string by one character and add an
+	* ellipsis.
+	*--------------------------------------------
+	lnLen = m.lnLen - 1
+	IF NOT m.llEllipsisAdded
+		*--------------------------------------------
+		* First loop.
+		*--------------------------------------------
+		lcTruncatedString = LEFT( m.lcTruncatedString, m.lnLen ) + CHR(133)
+		llEllipsisAdded = .T.
+	ELSE
+		*--------------------------------------------
+		* All further loops.
+		*--------------------------------------------
+		lcTruncatedString = LEFT( m.lcTruncatedString, m.lnLen - 1 ) + CHR(133)
+	ENDIF
+ENDDO
+*
+RETURN m.lcTruncatedString
+
+ENDPROC
+[END METHODS]
+[START RESERVED1]
+Class[END RESERVED1]
+[START RESERVED2]
+10[END RESERVED2]
+[START RESERVED3]
+*_isabstract (internal)
+*automoveformcontrols 
+*moveformcontrols 
+*refreshcaption 
+*refreshdescription 
+*refreshimage 
+*truncatestring 
+cdescriptionproperty Name of the form property that holds the text for edtDescription (optional)
+cimageproperty Name of the form property that holds the name of the picture shown in imgTitle (optional)
+csettingsclass Change this to match your derived class!
+csettingsclasslib Change this to match your derived class library!
+ctitleproperty Name of the form property that holds the text for lblCaption (optional). If not set, Form.Caption is used.
+lautomoveformcontrols Move all other controls on the form downward by This.Height. Makes sense when the TitleBar is added to an existing form.
+lfixedheight Issue a NODEFAULT in Move(). This prevents mwResize from changing This.Height.
+lrespectautocenter If Form.AutoCenter = .T., center the form again after removing the default TitleBar
+[END RESERVED3]
+[START RESERVED6]
+Pixels[END RESERVED6]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _48F07AUF6
+[CLASS] container
+[BASECLASS] container
+[OBJNAME] cmdClose
+[PARENT] themedtitlebarbase
+[START PROPERTIES]
+BackColor = 255,255,255
+BorderWidth = 0
+Height = 21
+Left = 271
+Name = "cmdClose"
+TabStop = .F.
+Top = 12
+Width = 40
+[END PROPERTIES]
+[START METHODS]
+PROCEDURE Click
+*--------------------------------------------
+* Double check if the form is allowed to be
+* closed by the "X".
+*--------------------------------------------
+IF NOT m.Thisform.Closable
+	RETURN
+ENDIF
+*--------------------------------------------
+* If a button is registered to close the form
+* we call its code. Otherwise just release
+* the form.
+*(..)No idea what to do if the form should be
+*(..)hidden instead.
+*--------------------------------------------
+IF m.Thisform.Visible ;
+		AND VARTYPE( m.Thisform.cCloseButton ) == "C" ;
+		AND NOT m.Thisform.cCloseButton == ""
+	LOCAL lcCmd
+	lcCmd = "m.Thisform." + m.Thisform.cCloseButton + ".Click()"
+	&lcCmd.
+ELSE
+	m.Thisform.Release()
+ENDIF
+
+ENDPROC
+PROCEDURE Init
+*--------------------------------------------
+* Set colors.
+*--------------------------------------------
+m.This.MouseLeave()
+
+ENDPROC
+PROCEDURE MouseEnter
+LPARAMETERS tnButton, tnShift, tnXCoord, tnYCoord
+*--------------------------------------------
+* Start hover effect.
+*--------------------------------------------
+IF m.Thisform.Closable
+	This.BackStyle = 1		&& Opaque.
+	This.lblSymbol.ForeColor = RGB( 0, 0, 0 )
+ENDIF
+
+ENDPROC
+PROCEDURE MouseLeave
+LPARAMETERS tnButton, tnShift, tnXCoord, tnYCoord
+*--------------------------------------------
+* Stop hover effect.
+*--------------------------------------------
+This.BackStyle = 0		&& Transparent.
+This.lblSymbol.ForeColor = RGB( 255, 255, 255 )
+
+ENDPROC
+PROCEDURE Refresh
+*--------------------------------------------
+* Disable/Visible as with a TopLevel form
+* with title bar.
+* Except: If all three system buttons are
+* disabled, the close button will be
+* invisible, too. The windows default
+* behavior is too ugly to keep it.
+*--------------------------------------------
+WITH Thisform
+	This.lblSymbol.Enabled = .Closable
+	This.Visible = .MinButton OR .MaxButton OR .Closable
+ENDWITH
+
+ENDPROC
+[END METHODS]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _48F07AUF7
+[CLASS] label
+[BASECLASS] label
+[OBJNAME] lblSymbol
+[PARENT] themedtitlebarbase.cmdClose
+[START PROPERTIES]
+Alignment = 1
+BackStyle = 0
+Caption = "r"
+FontName = "Marlett"
+Height = 14
+Left = 13
+Name = "lblSymbol"
+Top = 5
+Width = 14
+[END PROPERTIES]
+[START METHODS]
+PROCEDURE Click
+m.This.Parent.Click()
+
+ENDPROC
+[END METHODS]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _48F07AUF4
+[CLASS] container
+[BASECLASS] container
+[OBJNAME] cmdMaximize
+[PARENT] themedtitlebarbase
+[START PROPERTIES]
+BackColor = 255,255,255
+BorderWidth = 0
+Height = 20
+Left = 238
+Name = "cmdMaximize"
+TabStop = .F.
+Top = 12
+Width = 25
+[END PROPERTIES]
+[START METHODS]
+PROCEDURE Click
+IF m.Thisform.MaxButton
+	IF m.Thisform.WindowState == 2	&& Maximized.
+		Thisform.WindowState = 0	&& Normal.
+	ELSE
+		Thisform.WindowState = 2	&& Maximized.
+	ENDIF
+ENDIF
+
+ENDPROC
+PROCEDURE Init
+*--------------------------------------------
+* Set colors.
+*--------------------------------------------
+m.This.MouseLeave()
+
+ENDPROC
+PROCEDURE MouseEnter
+LPARAMETERS tnButton, tnShift, tnXCoord, tnYCoord
+*--------------------------------------------
+* Start hover effect.
+*--------------------------------------------
+IF m.Thisform.MaxButton
+	This.BackStyle = 1		&& Opaque.
+	This.lblSymbol.ForeColor = RGB( 0, 0, 0 )
+ENDIF
+
+ENDPROC
+PROCEDURE MouseLeave
+LPARAMETERS tnButton, tnShift, tnXCoord, tnYCoord
+*--------------------------------------------
+* Stop hover effect.
+*--------------------------------------------
+This.BackStyle = 0		&& Transparent.
+This.lblSymbol.ForeColor = RGB( 255, 255, 255 )
+
+ENDPROC
+PROCEDURE Refresh
+WITH Thisform
+	*--------------------------------------------
+	* Disable/Visible as with a TopLevel form
+	* with title bar.
+	*--------------------------------------------
+	This.lblSymbol.Enabled = .MaxButton
+	This.Visible = .MinButton OR .MaxButton
+	*--------------------------------------------
+	* Switch symbol with maximized form.
+	*--------------------------------------------
+	IF .WindowState == 2				&& Maximized.
+		This.lblSymbol.Caption = "2"	&& Restore.
+	ELSE								&& Normal.
+		This.lblSymbol.Caption = "1"	&& Maximize.
+	ENDIF
+ENDWITH
+
+ENDPROC
+[END METHODS]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _48F07AUF5
+[CLASS] label
+[BASECLASS] label
+[OBJNAME] lblSymbol
+[PARENT] themedtitlebarbase.cmdMaximize
+[START PROPERTIES]
+Alignment = 1
+BackStyle = 0
+Caption = "1"
+FontBold = .T.
+FontName = "Marlett"
+Height = 14
+Left = 4
+Name = "lblSymbol"
+Top = 5
+Width = 16
+[END PROPERTIES]
+[START METHODS]
+PROCEDURE Click
+m.This.Parent.Click()
+
+ENDPROC
+[END METHODS]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _48F07AUF2
+[CLASS] container
+[BASECLASS] container
+[OBJNAME] cmdMinimize
+[PARENT] themedtitlebarbase
+[START PROPERTIES]
+BackColor = 255,255,255
+BorderWidth = 0
+Height = 20
+Left = 206
+Name = "cmdMinimize"
+Top = 12
+Width = 25
+[END PROPERTIES]
+[START METHODS]
+PROCEDURE Click
+IF m.Thisform.MinButton
+	Thisform.WindowState = 1	&& Minimized.
+ENDIF
+
+ENDPROC
+PROCEDURE Init
+*--------------------------------------------
+* Set colors.
+*--------------------------------------------
+m.This.MouseLeave()
+
+ENDPROC
+PROCEDURE MouseEnter
+LPARAMETERS tnButton, tnShift, tnXCoord, tnYCoord
+*--------------------------------------------
+* Start hover effect.
+*--------------------------------------------
+IF m.Thisform.MinButton
+	This.BackStyle = 1		&& Opaque.
+	This.lblSymbol.ForeColor = RGB( 0, 0, 0 )
+ENDIF
+
+ENDPROC
+PROCEDURE MouseLeave
+LPARAMETERS tnButton, tnShift, tnXCoord, tnYCoord
+*--------------------------------------------
+* Stop hover effect.
+*--------------------------------------------
+This.BackStyle = 0		&& Transparent.
+This.lblSymbol.ForeColor = RGB( 255, 255, 255 )
+
+ENDPROC
+PROCEDURE Refresh
+*--------------------------------------------
+* Disable/Visible as with a TopLevel form
+* with title bar.
+*--------------------------------------------
+WITH Thisform
+	This.lblSymbol.Enabled = .MinButton
+	This.Visible = .MinButton OR .MaxButton
+ENDWITH
+
+ENDPROC
+[END METHODS]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _48F07AUF3
+[CLASS] label
+[BASECLASS] label
+[OBJNAME] lblSymbol
+[PARENT] themedtitlebarbase.cmdMinimize
+[START PROPERTIES]
+Alignment = 1
+BackStyle = 0
+Caption = "0"
+FontBold = .T.
+FontName = "Marlett"
+FontSize = 9
+Height = 14
+Left = 4
+Name = "lblSymbol"
+Top = 5
+Width = 16
+[END PROPERTIES]
+[START METHODS]
+PROCEDURE Click
+m.This.Parent.Click()
+
+ENDPROC
+[END METHODS]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _48N04CJ95
+[CLASS] editbox
+[BASECLASS] editbox
+[OBJNAME] edtDescription
+[PARENT] themedtitlebarbase
+[START PROPERTIES]
+BackStyle = 0
+BorderStyle = 0
+DisabledForeColor = 255,255,255
+Enabled = .F.
+FontName = "Tahoma"
+FontSize = 9
+Height = 32
+IntegralHeight = .T.
+Left = 78
+Name = "edtDescription"
+ScrollBars = 0
+Top = 31
+Width = 95
+[END PROPERTIES]
+[START METHODS]
+PROCEDURE DblClick
+m.This.Parent.DblClick()
+
+ENDPROC
+PROCEDURE MouseDown
+LPARAMETERS tnButton, tnShift, tnXCoord, tnYCoord
+*--------------------------------------------
+* Forward MouseDown event to the parent
+* because there is the code to move the form.
+*--------------------------------------------
+m.This.Parent.MouseDown( m.tnButton, m.tnShift, m.tnXCoord, m.tnYCoord )
+
+ENDPROC
+[END METHODS]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _48N017GBW
+[CLASS] image
+[BASECLASS] image
+[OBJNAME] imgTitle
+[PARENT] themedtitlebarbase
+[START PROPERTIES]
+BackStyle = 0
+Height = 48
+Left = 12
+Name = "imgTitle"
+Stretch = 1
+Top = 6
+Visible = .F.
+Width = 48
+[END PROPERTIES]
+[START METHODS]
+PROCEDURE DblClick
+m.This.Parent.DblClick()
+
+ENDPROC
+PROCEDURE MouseDown
+LPARAMETERS tnButton, tnShift, tnXCoord, tnYCoord
+*--------------------------------------------
+* Forward MouseDown event to the parent
+* because there is the code to move the form.
+*--------------------------------------------
+m.This.Parent.MouseDown( m.tnButton, m.tnShift, m.tnXCoord, m.tnYCoord )
+
+ENDPROC
+[END METHODS]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _48F07AUEN
+[CLASS] label
+[BASECLASS] label
+[OBJNAME] lblCaption
+[PARENT] themedtitlebarbase
+[START PROPERTIES]
+BackStyle = 0
+Caption = "Form Caption"
+FontBold = .T.
+FontName = "Tahoma"
+FontSize = 16
+ForeColor = 255,255,255
+Height = 29
+Left = 12
+Name = "lblCaption"
+Top = 16
+Width = 143
+[END PROPERTIES]
+[START METHODS]
+PROCEDURE DblClick
+m.This.Parent.DblClick()
+
+ENDPROC
+PROCEDURE MouseDown
+LPARAMETERS tnButton, tnShift, tnXCoord, tnYCoord
+*--------------------------------------------
+* Forward MouseDown event to the parent
+* because there is the code to move the form.
+*--------------------------------------------
+m.This.Parent.MouseDown( m.tnButton, m.tnShift, m.tnXCoord, m.tnYCoord )
+
+ENDPROC
+[END METHODS]
+
+[ RECORD]
+[PLATFORM] COMMENT 
+[UNIQUEID] RESERVED  
+[OBJNAME] themedtitlebarbase
+[START PROPERTIES]
+Tahoma, 0, 9, 5, 14, 12, 29, 2, 0
+[END PROPERTIES]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _4910YSE3R
+[CLASS] label
+[BASECLASS] label
+[OBJNAME] themedtitlebarsettingsbase
+[START PROPERTIES]
+Caption = "ThemedTitleBarSettings"
+Height = 17
+Name = "themedtitlebarsettingsbase"
+Width = 140
+ccaptionfontfamily = Segoe UI, Tahoma, Arial
+cdescriptionfontfamily = Segoe UI, Tahoma, Arial
+ntitlebarbackcolor = (RGB(122,122,122))
+ntitlebarforecolor = (RGB(255,255,255))
+[END PROPERTIES]
+[START METHODS]
+PROCEDURE Init
+*--------------------------------------------
+* Prevent this class form beeing instantiated
+* directly.
+*--------------------------------------------
+IF m.This._IsAbstract( m.This.Class, "ThemedTitleBarSettingsBase")
+	RETURN .F.
+ENDIF
+*--------------------------------------------
+* Setup.
+*--------------------------------------------
+LOCAL i, laFonts[1]
+*--------------------------------------------
+* Determine title bar fonts.
+*--------------------------------------------
+FOR i = 1 TO ALINES( laFonts, m.This.cCaptionFontFamily, 1+4, "," )
+	IF m.This.FontAvailable( laFonts[ i ] )
+		This.cCaptionFontFamily = laFonts[ i ]
+		EXIT
+	ENDIF
+ENDFOR
+FOR i = 1 TO ALINES( laFonts, m.This.cDescriptionFontFamily, 1+4, "," )
+	IF laFonts[ i ] == m.This.cCaptionFontFamily ;		&& No need to check again.
+			OR m.This.FontAvailable( laFonts[ i ] )
+		This.cDescriptionFontFamily = laFonts[ i ]
+		EXIT
+	ENDIF
+ENDFOR
+
+ENDPROC
+PROCEDURE _isabstract
+LPARAMETERS tcClass, tcClassName
+
+IF UPPER( m.tcClass ) == UPPER( m.tcClassName )
+	#DEFINE MB_OK		0
+	#DEFINE MB_ICONSTOP	16
+	MESSAGEBOX( "This class can not be instantiated directly." +CHR(13)+ ;
+		"Please use a derivative of the class instead.", ;
+ 		MB_ICONSTOP + MB_OK, ;
+ 		m.tcClassName )
+	RETURN .T.
+ELSE
+	RETURN .F.
+ENDIF
+
+ENDPROC
+PROCEDURE fontavailable
+LPARAMETERS tcFontName
+*--------------------------------------------
+* Is this font available?
+*--------------------------------------------
+LOCAL laFont[1]
+AFONT( laFont )
+RETURN ASCAN( laFont, m.tcFontName, 1, -1, 1, 1 ) > 0
+
+ENDPROC
+[END METHODS]
+[START RESERVED1]
+Class[END RESERVED1]
+[START RESERVED2]
+1[END RESERVED2]
+[START RESERVED3]
+*_isabstract (internal)
+*fontavailable 
+ccaptionfontfamily
+cdescriptionfontfamily
+ntitlebarbackcolor
+ntitlebarforecolor
+[END RESERVED3]
+[START RESERVED6]
+Pixels[END RESERVED6]
+
+[ RECORD]
+[PLATFORM] COMMENT 
+[UNIQUEID] RESERVED  
+[OBJNAME] themedtitlebarsettingsbase
+[EOF]

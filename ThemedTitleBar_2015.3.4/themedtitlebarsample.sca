@@ -1,0 +1,193 @@
+SCCTEXT Version 4.0.0.2
+PLATFORM C(8,0),UNIQUEID C(10,0),TIMESTAMP N(10,0),CLASS M(4,0),CLASSLOC M(4,0),BASECLASS M(4,0),OBJNAME M(4,0),PARENT M(4,0),PROPERTIES M(4,0),PROTECTED M(4,0),METHODS M(4,0),OBJCODE M(4,0),OLE M(4,0),OLE2 M(4,0),RESERVED1 M(4,0),RESERVED2 M(4,0),RESERVED3 M(4,0),RESERVED4 M(4,0),RESERVED5 M(4,0),RESERVED6 M(4,0),RESERVED7 M(4,0),RESERVED8 M(4,0),USER M(4,0)
+1252
+
+[ RECORD]
+[PLATFORM] COMMENT 
+[UNIQUEID] Screen    
+[START RESERVED1]
+VERSION =   3.00[END RESERVED1]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _48T0WHAKO
+[CLASS] dataenvironment
+[BASECLASS] dataenvironment
+[OBJNAME] Dataenvironment
+[START PROPERTIES]
+DataSource = .NULL.
+Height = 0
+Left = 0
+Name = "Dataenvironment"
+Top = 0
+Width = 0
+[END PROPERTIES]
+[START RESERVED2]
+1[END RESERVED2]
+[START RESERVED4]
+1[END RESERVED4]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _48T0WHAKP
+[CLASS] form
+[BASECLASS] form
+[OBJNAME] Form1
+[START PROPERTIES]
+AutoCenter = .T.
+Caption = "Form1"
+DoCreate = .T.
+Height = 161
+Name = "Form1"
+Width = 515
+themedtitlebardescription = Further descripton gooes here...
+themedtitlebarimage = (HOME()+"Graphics\Gifs\MorphFox.gif")
+[END PROPERTIES]
+[START RESERVED3]
+themedtitlebardescription
+themedtitlebarimage
+[END RESERVED3]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _48T0WJSM2
+[CLASS] commandbutton
+[BASECLASS] commandbutton
+[OBJNAME] cmdSwitchCaption
+[PARENT] Form1
+[START PROPERTIES]
+Caption = "Change Caption"
+Height = 27
+Left = 348
+Name = "cmdSwitchCaption"
+Top = 12
+Width = 156
+[END PROPERTIES]
+[START METHODS]
+PROCEDURE Click
+Thisform.Caption = TTOC(DATETIME())
+
+ENDPROC
+[END METHODS]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _48T0WJSM1
+[CLASS] commandbutton
+[BASECLASS] commandbutton
+[OBJNAME] cmdSwitchClosable
+[PARENT] Form1
+[START PROPERTIES]
+Caption = "Change Closable"
+Height = 27
+Left = 348
+Name = "cmdSwitchClosable"
+Top = 120
+Width = 156
+[END PROPERTIES]
+[START METHODS]
+PROCEDURE Click
+Thisform.Closable = NOT Thisform.Closable
+ACTIVATE SCREEN
+? "Closable", IIF( Thisform.Closable, "on", "off" )
+
+ENDPROC
+[END METHODS]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _48T0WJSM0
+[CLASS] commandbutton
+[BASECLASS] commandbutton
+[OBJNAME] cmdSwitchMaxButton
+[PARENT] Form1
+[START PROPERTIES]
+Caption = "Change MaxButton"
+Height = 27
+Left = 348
+Name = "cmdSwitchMaxButton"
+Top = 84
+Width = 156
+[END PROPERTIES]
+[START METHODS]
+PROCEDURE Click
+Thisform.MaxButton = NOT Thisform.MaxButton
+ACTIVATE SCREEN
+? "MaxButton", IIF( Thisform.MaxButton, "on", "off" )
+
+ENDPROC
+[END METHODS]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _48T0WJSLZ
+[CLASS] commandbutton
+[BASECLASS] commandbutton
+[OBJNAME] cmdSwitchMinButton
+[PARENT] Form1
+[START PROPERTIES]
+Caption = "Change MinButton"
+Height = 27
+Left = 348
+Name = "cmdSwitchMinButton"
+Top = 48
+Width = 156
+[END PROPERTIES]
+[START METHODS]
+PROCEDURE Click
+Thisform.MinButton = NOT Thisform.MinButton
+ACTIVATE SCREEN
+? "MinButton", IIF( Thisform.MinButton, "on", "off" )
+
+ENDPROC
+[END METHODS]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _48T0Y9TER
+[CLASS] label
+[BASECLASS] label
+[OBJNAME] Label1
+[PARENT] Form1
+[START PROPERTIES]
+BackStyle = 0
+Caption = ("This form shows that you can use your forms as they are. You don't have to change anything in order to make ThemedTitleBar work."+CHR(13)+CHR(13)+"As the buttons show, even runtime changes to title bar related properties are respected.")
+Height = 110
+Left = 12
+Name = "Label1"
+Top = 9
+Width = 325
+WordWrap = .T.
+[END PROPERTIES]
+
+[ RECORD]
+[PLATFORM] WINDOWS 
+[UNIQUEID] _48T0WJSM3
+[CLASS] themedtitlebar
+[CLASSLOC] themedtitlebar.vcx
+[BASECLASS] control
+[OBJNAME] Themedtitlebar1
+[PARENT] Form1
+[START PROPERTIES]
+Left = 12
+Name = "Themedtitlebar1"
+Top = 100
+cmdClose.Name = "cmdClose"
+cmdClose.lblSymbol.Name = "lblSymbol"
+cmdMaximize.Name = "cmdMaximize"
+cmdMaximize.lblSymbol.Name = "lblSymbol"
+cmdMinimize.Name = "cmdMinimize"
+cmdMinimize.lblSymbol.Name = "lblSymbol"
+edtDescription.Name = "edtDescription"
+imgTitle.Name = "imgTitle"
+lblCaption.Name = "lblCaption"
+[END PROPERTIES]
+
+[ RECORD]
+[PLATFORM] COMMENT 
+[UNIQUEID] RESERVED  
+[START PROPERTIES]
+Arial, 0, 9, 5, 15, 12, 32, 3, 0
+Tahoma, 0, 9, 5, 14, 12, 29, 2, 0
+[END PROPERTIES]
+[EOF]
